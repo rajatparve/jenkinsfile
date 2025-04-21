@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    environment {
+        REPO_URL = 'https://github.com/rajatparve/hrms.git'
+        BRANCH = 'main'
+    }
+
+    stages {
+        stage('Install Apache') {
+            steps {
+                echo 'Installing Apache web server...'
+                sh '''
+                    if ! dpkg -l | grep -q apache2; then
+                        sudo apt-get update
+                        sudo apt-get install -y apache2
+                        sudo systemctl enable apache2
+                    fi
+                    sudo systemctl start apache2
+                '''
+            }
+        }
+
+        stage('Checkout Code from GitHub') {
+            steps {
+                echo "Cloning from ${REPO_URL}"
+                git branch: "${BRANCH}", url: "${REPO_URL}"
+            }
+        }
+
+        stage('Deploy to /var/www/html') {
+            steps {
+                echo 'Deploying files to Apache web directory...'
+                sh '''
+                    sudo rm -rf /var/www/html/*
+                    sudo cp -r * /var/www/html/
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Deployment completed! Visit your server IP to view the site.'
+        }
+        failure {
+            echo '❌ Deployment failed. Check logs.'
+        }
+    }
+}
